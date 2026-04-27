@@ -7,6 +7,7 @@ const links = [
   { to: "/calculator", label: "Admission Calculator" },
   { to: "/essay", label: "Essay AI" },
   { to: "/universities", label: "University Database" },
+  { to: "/roadmap", label: "My Path" },
 ];
 
 const Header = () => {
