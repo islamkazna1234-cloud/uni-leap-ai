@@ -138,19 +138,26 @@ const Calculator = () => {
   );
 };
 
-const Field = ({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement> & { onChange: (v: string) => void }) => {
-  const { onChange, ...rest } = props as any;
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <input
-        {...rest}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1.5 w-full h-11 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-      />
-    </label>
-  );
-};
+const Field = ({
+  label,
+  value,
+  onChange,
+  ...rest
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) => (
+  <label className="block">
+    <span className="text-sm font-medium text-foreground">{label}</span>
+    <input
+      {...rest}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="mt-1.5 w-full h-11 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+    />
+  </label>
+);
 
 const SelectField = ({
   label,
