@@ -30,7 +30,7 @@ type Task = {
   hours: number;
 };
 
-type Plan = {
+type PlanData = {
   readiness: number;
   summary: string;
   gaps: string[];
