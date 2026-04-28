@@ -143,10 +143,47 @@ const planTool = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed. Use POST with a JSON profile body." }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   try {
-    const profile = (await req.json()) as Profile;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY missing");
+      return new Response(
+        JSON.stringify({ error: "Server is not configured. Please contact support." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Request body must be valid JSON." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const parsed = ProfileSchema.safeParse(raw);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      const firstField = Object.keys(fieldErrors)[0];
+      const firstMsg = firstField ? fieldErrors[firstField]?.[0] : "Invalid profile data";
+      return new Response(
+        JSON.stringify({
+          error: firstMsg ?? "Invalid profile data",
+          fieldErrors,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const profile: Profile = parsed.data;
 
     const userPrompt = `Build a personalized admission plan for this student:
 
