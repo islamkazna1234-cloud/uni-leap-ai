@@ -79,7 +79,7 @@ const Plan = () => {
     interests: "",
     achievements: "",
   });
-  const [plan, setPlan] = useState<Plan | null>(null);
+  const [plan, setPlan] = useState<PlanData | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<Record<string, boolean>>({});
 
@@ -111,7 +111,7 @@ const Plan = () => {
       const { data, error } = await supabase.functions.invoke("generate-plan", { body: profile });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setPlan(data.plan as Plan);
+      setPlan(data.plan as PlanData);
       setDone({});
       toast({ title: "Plan ready", description: "Your personal admission plan was generated." });
     } catch (e: any) {
