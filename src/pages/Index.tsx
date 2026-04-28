@@ -46,10 +46,10 @@ const Index = () => {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                to="/calculator"
+                to="/plan"
                 className="inline-flex items-center gap-2 h-12 rounded-lg bg-primary px-6 font-medium text-primary-foreground hover:bg-primary-glow transition-colors shadow-elev"
               >
-                Start My Application <ArrowRight className="h-4 w-4" />
+                Generate My AI Plan <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 to="/universities"

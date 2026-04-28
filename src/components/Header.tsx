@@ -8,6 +8,7 @@ const links = [
   { to: "/essay", label: "Essay AI" },
   { to: "/universities", label: "University Database" },
   { to: "/roadmap", label: "My Path" },
+  { to: "/plan", label: "AI Plan" },
 ];
 
 const Header = () => {
@@ -44,10 +45,10 @@ const Header = () => {
         </nav>
 
         <Link
-          to="/calculator"
+          to="/plan"
           className="hidden sm:inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-glow transition-colors"
         >
-          Start My Application
+          Generate My Plan
         </Link>
       </div>
     </header>
