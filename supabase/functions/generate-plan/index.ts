@@ -1,24 +1,59 @@
 // Mentor.AI — Personalized Plan Generator
 // Uses Lovable AI Gateway (Gemini) with tool-calling to return a structured plan.
 
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface Profile {
-  grade: string;
-  gpa: number;
-  ielts?: number;
-  sat?: number;
-  unt?: number;
-  countries: string[];
-  major: string;
-  budget: string;
-  interests: string;
-  achievements: string;
-}
+const ALLOWED_GRADES = ["8", "9", "10", "11", "12", "Gap year", "University"] as const;
+const ALLOWED_BUDGETS = [
+  "Free / Grant only",
+  "< $5,000/yr",
+  "$5,000–$15,000/yr",
+  "$15,000–$30,000/yr",
+  "$30,000+/yr",
+  "Flexible",
+] as const;
+
+// Coerce empty strings / null to undefined so optional numeric fields don't fail validation
+const optionalNumber = (min: number, max: number, label: string) =>
+  z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : v),
+    z
+      .coerce.number({ invalid_type_error: `${label} must be a number` })
+      .min(min, { message: `${label} must be at least ${min}` })
+      .max(max, { message: `${label} must be at most ${max}` })
+      .optional(),
+  );
+
+const ProfileSchema = z.object({
+  grade: z.enum(ALLOWED_GRADES, {
+    errorMap: () => ({ message: `Grade must be one of: ${ALLOWED_GRADES.join(", ")}` }),
+  }),
+  gpa: z.coerce
+    .number({ invalid_type_error: "GPA must be a number" })
+    .min(0, { message: "GPA cannot be negative" })
+    .max(4, { message: "GPA must be on a 4.0 scale (max 4.0)" }),
+  ielts: optionalNumber(0, 9, "IELTS"),
+  sat: optionalNumber(400, 1600, "SAT"),
+  unt: optionalNumber(0, 140, "UNT (ЕНТ)"),
+  countries: z
+    .array(z.string().trim().min(1).max(60))
+    .min(1, { message: "Select at least one target country" })
+    .max(10, { message: "Pick at most 10 target countries" }),
+  major: z.string().trim().min(2, { message: "Major is required" }).max(80),
+  budget: z.enum(ALLOWED_BUDGETS, {
+    errorMap: () => ({ message: `Budget must be one of: ${ALLOWED_BUDGETS.join(", ")}` }),
+  }),
+  interests: z.string().trim().max(1000, { message: "Interests must be under 1000 characters" }).optional().default(""),
+  achievements: z.string().trim().max(2000, { message: "Achievements must be under 2000 characters" }).optional().default(""),
+});
+
+type Profile = z.infer<typeof ProfileSchema>;
 
 const SYSTEM = `You are Mentor.AI — a senior university admissions strategist for Kazakhstani students applying both locally (UNT/ЕНТ, NU, KBTU, Satbayev) and abroad (USA, UK, EU, South Korea).
 
@@ -108,10 +143,47 @@ const planTool = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed. Use POST with a JSON profile body." }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   try {
-    const profile = (await req.json()) as Profile;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY missing");
+      return new Response(
+        JSON.stringify({ error: "Server is not configured. Please contact support." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Request body must be valid JSON." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const parsed = ProfileSchema.safeParse(raw);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      const firstField = Object.keys(fieldErrors)[0];
+      const firstMsg = firstField ? fieldErrors[firstField]?.[0] : "Invalid profile data";
+      return new Response(
+        JSON.stringify({
+          error: firstMsg ?? "Invalid profile data",
+          fieldErrors,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const profile: Profile = parsed.data;
 
     const userPrompt = `Build a personalized admission plan for this student:
 
