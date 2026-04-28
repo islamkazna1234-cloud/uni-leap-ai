@@ -9,18 +9,51 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface Profile {
-  grade: string;
-  gpa: number;
-  ielts?: number;
-  sat?: number;
-  unt?: number;
-  countries: string[];
-  major: string;
-  budget: string;
-  interests: string;
-  achievements: string;
-}
+const ALLOWED_GRADES = ["8", "9", "10", "11", "12", "Gap year", "University"] as const;
+const ALLOWED_BUDGETS = [
+  "Free / Grant only",
+  "< $5,000/yr",
+  "$5,000–$15,000/yr",
+  "$15,000–$30,000/yr",
+  "$30,000+/yr",
+  "Flexible",
+] as const;
+
+// Coerce empty strings / null to undefined so optional numeric fields don't fail validation
+const optionalNumber = (min: number, max: number, label: string) =>
+  z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : v),
+    z
+      .coerce.number({ invalid_type_error: `${label} must be a number` })
+      .min(min, { message: `${label} must be at least ${min}` })
+      .max(max, { message: `${label} must be at most ${max}` })
+      .optional(),
+  );
+
+const ProfileSchema = z.object({
+  grade: z.enum(ALLOWED_GRADES, {
+    errorMap: () => ({ message: `Grade must be one of: ${ALLOWED_GRADES.join(", ")}` }),
+  }),
+  gpa: z.coerce
+    .number({ invalid_type_error: "GPA must be a number" })
+    .min(0, { message: "GPA cannot be negative" })
+    .max(4, { message: "GPA must be on a 4.0 scale (max 4.0)" }),
+  ielts: optionalNumber(0, 9, "IELTS"),
+  sat: optionalNumber(400, 1600, "SAT"),
+  unt: optionalNumber(0, 140, "UNT (ЕНТ)"),
+  countries: z
+    .array(z.string().trim().min(1).max(60))
+    .min(1, { message: "Select at least one target country" })
+    .max(10, { message: "Pick at most 10 target countries" }),
+  major: z.string().trim().min(2, { message: "Major is required" }).max(80),
+  budget: z.enum(ALLOWED_BUDGETS, {
+    errorMap: () => ({ message: `Budget must be one of: ${ALLOWED_BUDGETS.join(", ")}` }),
+  }),
+  interests: z.string().trim().max(1000, { message: "Interests must be under 1000 characters" }).optional().default(""),
+  achievements: z.string().trim().max(2000, { message: "Achievements must be under 2000 characters" }).optional().default(""),
+});
+
+type Profile = z.infer<typeof ProfileSchema>;
 
 const SYSTEM = `You are Mentor.AI — a senior university admissions strategist for Kazakhstani students applying both locally (UNT/ЕНТ, NU, KBTU, Satbayev) and abroad (USA, UK, EU, South Korea).
 
