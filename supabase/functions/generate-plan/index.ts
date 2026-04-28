@@ -1,6 +1,8 @@
 // Mentor.AI — Personalized Plan Generator
 // Uses Lovable AI Gateway (Gemini) with tool-calling to return a structured plan.
 
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
