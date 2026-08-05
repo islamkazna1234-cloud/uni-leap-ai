@@ -55,6 +55,42 @@ const ProfileSchema = z.object({
 
 type Profile = z.infer<typeof ProfileSchema>;
 
+// Normalize grade: "11th" -> "11", "11 grade" -> "11", "gap year" -> "Gap year", etc.
+function normalizeGrade(input: unknown): string {
+  if (typeof input !== "string") return String(input ?? "");
+  const s = input.trim();
+  const digitMatch = s.match(/^\d{1,2}/);
+  if (digitMatch) return digitMatch[0];
+  if (/gap/i.test(s)) return "Gap year";
+  if (/univ/i.test(s)) return "University";
+  return s;
+}
+
+// Normalize budget: map free-form phrasing (e.g. "Up to $10k / year") to the canonical bucket
+function normalizeBudget(input: unknown): string {
+  if (typeof input !== "string") return String(input ?? "");
+  const s = input.toLowerCase();
+  if (/free|grant/.test(s)) return "Free / Grant only";
+  if (/flexible/.test(s)) return "Flexible";
+
+  // Extract numbers, expanding "10k" -> 10000
+  const matches = s.match(/[\d,.]+\s*k?/g) || [];
+  const nums = matches.map((m) => {
+    const isK = /k/.test(m);
+    const n = parseFloat(m.replace(/[^\d.]/g, ""));
+    return isK ? n * 1000 : n;
+  }).filter((n) => !isNaN(n));
+
+  if (nums.length) {
+    const max = Math.max(...nums);
+    if (max < 5000) return "< $5,000/yr";
+    if (max <= 15000) return "$5,000–$15,000/yr";
+    if (max <= 30000) return "$15,000–$30,000/yr";
+    return "$30,000+/yr";
+  }
+  return input.trim();
+}
+
 const SYSTEM = `You are Mentor.AI — a senior university admissions strategist for Kazakhstani students applying both locally (UNT/ЕНТ, NU, KBTU, Satbayev) and abroad (USA, UK, EU, South Korea).
 
 You operate as a Decision Tree:
@@ -168,6 +204,12 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Request body must be valid JSON." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    if (raw && typeof raw === "object") {
+      const r = raw as Record<string, unknown>;
+      if ("grade" in r) r.grade = normalizeGrade(r.grade);
+      if ("budget" in r) r.budget = normalizeBudget(r.budget);
     }
 
     const parsed = ProfileSchema.safeParse(raw);
