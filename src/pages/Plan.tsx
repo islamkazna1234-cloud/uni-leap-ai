@@ -319,24 +319,27 @@ const Plan = () => {
             </div>
 
             {/* Deadlines */}
-            {plan.deadlines.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
-                <div className="flex items-center gap-2 text-sm font-semibold mb-4">
-                  <CalendarClock className="h-4 w-4 text-primary" /> Deadline Engine
-                </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {plan.deadlines.map((d, i) => (
-                    <div key={i} className="rounded-lg border border-border bg-soft p-4">
-                      <div className="text-xs font-semibold text-primary">{d.date}</div>
-                      <div className="text-sm font-medium mt-1">{d.label}</div>
-                      <div className="text-xs text-muted-foreground mt-1.5">
-                        {d.daysAway > 0 ? `${d.daysAway} days away` : "Past due"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+{plan.deadlines.length > 0 && (
+  <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+    <div className="flex items-center gap-2 text-sm font-semibold mb-1">
+      <CalendarClock className="h-4 w-4 text-primary" /> Deadline Engine
+    </div>
+    <p className="text-xs text-muted-foreground mb-4">
+      Даты рассчитаны AI приблизительно и могут не совпадать с актуальными — обязательно проверяйте на официальном сайте университета перед подачей.
+    </p>
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {plan.deadlines.map((d, i) => (
+        <div key={i} className="rounded-lg border border-border bg-soft p-4">
+          <div className="text-xs font-semibold text-primary">{d.date}</div>
+          <div className="text-sm font-medium mt-1">{d.label}</div>
+          <div className="text-xs text-muted-foreground mt-1.5">
+            {d.daysAway > 0 ? `${d.daysAway} days away` : "Past due"}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
             {/* Tasks by block */}
             {grouped?.map(({ cat, tasks }) => {
